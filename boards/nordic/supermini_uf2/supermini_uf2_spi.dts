@@ -1,3 +1,6 @@
+// Copyright (c) 2024 Nordic Semiconductor ASA
+// SPDX-License-Identifier: Apache-2.0
+
 /dts-v1/;
 #include <nordic/nrf52840_qiaa.dtsi>
 
@@ -6,10 +9,10 @@
     compatible = "supermini_uf2";
 
     chosen {
-        zephyr,sram        = &sram0;
-        zephyr,flash       = &flash0;
-        zephyr,console     = &cdc_acm_uart0;
-        zephyr,shell-uart  = &cdc_acm_uart0;
+        zephyr,sram       = &sram0;
+        zephyr,flash      = &flash0;
+        zephyr,console    = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
     };
 
     pwmleds {
@@ -28,78 +31,36 @@
     };
 
     aliases {
-        sw0      = &button0;     /* Uncomment to enable SW0 */
+        sw0      = &button0;     /* Uncomment to Enable SW0 */
         pwm-led0 = &pwm_led0;
     };
 
     pwmclock: pwmclock {
-        compatible = "pwm-clock";
-        #clock-cells = <1>;
-        pwms = <&pwm1 0 PWM_HZ(32768) PWM_POLARITY_NORMAL>;
+        compatible    = "pwm-clock";
+        #clock-cells  = <1>;
+        pwms          = <&pwm1 0 PWM_HZ(32768) PWM_POLARITY_NORMAL>;
     };
 
     battery-divider {
-        compatible = "voltage-divider";
-        status = "okay";
-        io-channels = <&adc 12>; /* Measure VDDHDIV5 */
+        compatible  = "voltage-divider";
+        status      = "okay";
+        io-channels = <&adc 12>;   /* Measure VDDHDIV5 */
         output-ohms = <1>;
         full-ohms   = <5>;
     };
 
     zephyr,user {
-        /* We’ve hard-wired the IMU’s VCC → 3.3 V and GND → GND
-           (no GPIO-controlled power now). */
-        int0-gpios = <&gpio1 0 GPIO_INT_EDGE_TO_ACTIVE>; /* IMU INT1 → P1.00 */
+        /*
+         * IMU VCC  → P0.17 (GPIO_OPEN_SOURCE)
+         * IMU GND  → P0.20 (GPIO_OPEN_DRAIN)
+         * IMU INT1 → P0.02 (active-high by default)
+         * (No CLK_CTL on this IMU, so we omit that line)
+         */
+        pwr-gpios = <&gpio0 17 GPIO_OPEN_SOURCE>;
+        gnd-gpios = <&gpio0 20 GPIO_OPEN_DRAIN>;
+        int0-gpios = <&gpio0 2 0>;
         led-gpios  = <&gpio0 15 GPIO_OPEN_SOURCE>;
-        clk-gpios  = <&gpio1 11 GPIO_OPEN_DRAIN>; /* Only if using an external clock */
-    };
-};
-
-&pinctrl {
-    pwm0_default: pwm0_default {
-        group1 {
-            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
-            nordic,drive-mode = <NRF_DRIVE_D0S1>;
-        };
-    };
-
-    pwm0_sleep: pwm0_sleep {
-        group1 {
-            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
-            low-power-enable;
-        };
-    };
-
-    pwm1_default: pwm1_default {
-        group1 {
-            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
-        };
-    };
-
-    pwm1_sleep: pwm1_sleep {
-        group1 {
-            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
-            low-power-enable;
-        };
-    };
-
-    /* === SPI3 pinctrl blocks updated to match your IMU wiring === */
-    spi3_default: spi3_default {
-        group1 {
-            /* MISO → P0.22, MOSI → P0.20, SCK → P0.17 */
-            psels = <NRF_PSEL(SPIM_MISO, 0, 22)>,
-                    <NRF_PSEL(SPIM_MOSI, 0, 20)>,
-                    <NRF_PSEL(SPIM_SCK,  0, 17)>;
-        };
-    };
-
-    spi3_sleep: spi3_sleep {
-        group1 {
-            psels = <NRF_PSEL(SPIM_MISO, 0, 22)>,
-                    <NRF_PSEL(SPIM_MOSI, 0, 20)>,
-                    <NRF_PSEL(SPIM_SCK,  0, 17)>;
-            low-power-enable;
-        };
+        /* clk-gpios removed, since this IMU has no CLK_CTL pin */
     };
 };
 
@@ -139,7 +100,7 @@
 
 zephyr_udc0: &usbd {
     compatible = "nordic,nrf-usbd";
-    status = "okay";
+    status     = "okay";
     cdc_acm_uart0: cdc_acm_uart0 {
         compatible = "zephyr,cdc-acm-uart";
     };
@@ -153,24 +114,80 @@ zephyr_udc0: &usbd {
     status = "disabled";
 };
 
-/* === SPI3 node updated for ICM-45686 over SPI === */
+&pinctrl {
+    pwm0_default: pwm0_default {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
+            nordic,drive-mode = <NRF_DRIVE_D0S1>;
+        };
+    };
+
+    pwm0_sleep: pwm0_sleep {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
+            low-power-enable;
+        };
+    };
+
+    pwm1_default: pwm1_default {
+        group1 {
+            psels = <NRF_PIN_DISCONNECTED>;
+        };
+    };
+
+    pwm1_sleep: pwm1_sleep {
+        group1 {
+            psels = <NRF_PIN_DISCONNECTED>;
+            low-power-enable;
+        };
+    };
+
+    /*
+     * === SPI3 pinctrl groups, remapped for your IMU pins ===
+     *
+     * IMU SCL (→ SPIM_SCK)  = P0.22
+     * IMU SDA (→ SPIM_MOSI) = P0.24
+     * IMU SDO (→ SPIM_MISO) = P0.11
+     */
+    spi3_default: spi3_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_MISO, 0, 11)>,  /* P0.11 as MISO (IMU SDO) */
+                    <NRF_PSEL(SPIM_MOSI, 0, 24)>,  /* P0.24 as MOSI (IMU SDA) */
+                    <NRF_PSEL(SPIM_SCK,  0, 22)>;  /* P0.22 as SCK  (IMU SCL) */
+        };
+    };
+
+    spi3_sleep: spi3_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_MISO, 0, 11)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 24)>,
+                    <NRF_PSEL(SPIM_SCK,  0, 22)>;
+            low-power-enable;
+        };
+    };
+};
+
+/*
+ * === SPI3 controller node ===
+ *
+ * Now that the pinctrl groups match the IMU pins, we enable SPI3
+ * and wire the CS line to P1.00 (active-low).
+ */
 &spi3 {
-    compatible = "nordic,nrf-spim";
-    status = "okay";
-    max-frequency = <DT_FREQ_M(24)>;
-    pinctrl-0 = <&spi3_default>;
-    pinctrl-1 = <&spi3_sleep>;
-    pinctrl-names = "default", "sleep";
+    compatible     = "nordic,nrf-spim";
+    status         = "okay";
+    max-frequency  = <DT_FREQ_M(24)>;          /* 24 MHz SPI clock */
+    pinctrl-0      = <&spi3_default>;
+    pinctrl-1      = <&spi3_sleep>;
+    pinctrl-names  = "default", "sleep";
 
-    /* CS from IMU → P0.24 (active-low) */
-    cs-gpios = <&gpio0 24 GPIO_ACTIVE_LOW>;
+    /* IMU CS → P1.00 (active-low) */
+    cs-gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
 
-    imu_spi: imu@0 {
-        /* Use the ICM-45686 Zephyr driver on SPI (binding provided by Zephyr) */
-        compatible = "invensense,icm45686";  
-        reg = <0>;                                /* CS index = 0 */
-        spi-max-frequency = <DT_FREQ_M(24)>;      /* 24 MHz SPI clock */
-        drdy-gpios = <&gpio1 0 GPIO_INT_EDGE_TO_ACTIVE>; /* INT1 → P1.00 */
-        label = "ICM45686_IMU";
+    imu_spi: imu_spi@0 {
+        compatible         = "vnd,spi-device";
+        spi-max-frequency  = <DT_FREQ_M(24)>;
+        label              = "imu-spi";
+        reg                = <0>;               /* chip-select index = 0 */
     };
 };
