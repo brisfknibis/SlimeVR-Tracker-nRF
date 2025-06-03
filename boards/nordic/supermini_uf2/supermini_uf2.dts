@@ -4,205 +4,232 @@
 /dts-v1/;
 #include <nordic/nrf52840_qiaa.dtsi>
 
+// move to dtsi?
 &pinctrl {
-	i2c0_default: i2c0_default {
-		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 0, 6)>, <NRF_PSEL(TWIM_SCL, 0, 8)>;
-			bias-disable;
-		};
-	};
+    i2c0_default: i2c0_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,    /* I²C SDA on P0.06 (unchanged) */
+                    <NRF_PSEL(TWIM_SCL, 0, 8)>;    /* I²C SCL on P0.08 (unchanged) */
+            bias-disable;
+        };
+    };
 
-	i2c0_sleep: i2c0_sleep {
-		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 0, 6)>, <NRF_PSEL(TWIM_SCL, 0, 8)>;
-			bias-disable;
-			low-power-enable;
-		};
-	};
+    i2c0_sleep: i2c0_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 8)>;
+            bias-disable;
+            low-power-enable;
+        };
+    };
 
-	pwm0_default: pwm0_default {
-		group1 {
-			psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
-			nordic,drive-mode = <NRF_DRIVE_D0S1>;
-		};
-	};
+    pwm0_default: pwm0_default {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
+            nordic,drive-mode = <NRF_DRIVE_D0S1>;
+        };
+    };
 
-	pwm0_sleep: pwm0_sleep {
-		group1 {
-			psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
-			low-power-enable;
-		};
-	};
+    pwm0_sleep: pwm0_sleep {
+        group1 {
+            psels = <NRF_PSEL(PWM_OUT0, 0, 15)>;
+            low-power-enable;
+        };
+    };
 
-	pwm1_default: pwm1_default {
-		group1 {
-			psels = <NRF_PIN_DISCONNECTED>;
-		};
-	};
+    pwm1_default: pwm1_default {
+        group1 {
+            psels = <NRF_PIN_DISCONNECTED>;
+        };
+    };
 
-	pwm1_sleep: pwm1_sleep {
-		group1 {
-			psels = <NRF_PIN_DISCONNECTED>;
-			low-power-enable;
-		};
-	};
+    pwm1_sleep: pwm1_sleep {
+        group1 {
+            psels = <NRF_PIN_DISCONNECTED>;
+            low-power-enable;
+        };
+    };
 
-	spi3_default: spi3_default {
-		group1 {
-			psels = <NRF_PSEL(SPIM_MISO, 0, 24)>,
-					<NRF_PSEL(SPIM_MOSI, 1, 0)>,
-					<NRF_PSEL(SPIM_SCK, 0, 22)>;
-		};
-	};
+    /*
+     * === SPI3 pinctrl groups, remapped for your IMU pins ===
+     *
+     *   IMU SCL (SPI SCK)  → P0.17
+     *   IMU SDA (SPI MOSI) → P0.20
+     *   IMU SDO (SPI MISO) → P0.22
+     */
+    spi3_default: spi3_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_MISO, 0, 22)>,  /* P0.22 as MISO (IMU SDO) */
+                    <NRF_PSEL(SPIM_MOSI, 0, 20)>,  /* P0.20 as MOSI (IMU SDA) */
+                    <NRF_PSEL(SPIM_SCK,  0, 17)>;  /* P0.17 as SCK  (IMU SCL) */
+        };
+    };
 
-	spi3_sleep: spi3_sleep {
-		group1 {
-			psels = <NRF_PSEL(SPIM_MISO, 0, 24)>,
-					<NRF_PSEL(SPIM_MOSI, 1, 0)>,
-					<NRF_PSEL(SPIM_SCK, 0, 22)>;
-			low-power-enable;
-		};
-	};
+    spi3_sleep: spi3_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_MISO, 0, 22)>,
+                    <NRF_PSEL(SPIM_MOSI, 0, 20)>,
+                    <NRF_PSEL(SPIM_SCK,  0, 17)>;
+            low-power-enable;
+        };
+    };
 };
+// end
 
-&adc {
-	status = "okay";
-};
+/ {
+    model       = "supermini_uf2";
+    compatible  = "supermini_uf2";
 
-&gpiote {
-	status = "okay";
-};
+    chosen {
+        zephyr,sram       = &sram0;
+        zephyr,flash      = &flash0;
+        zephyr,console    = &cdc_acm_uart0;
+        zephyr,shell-uart = &cdc_acm_uart0;
+    };
 
-&gpio0 {
-	status = "okay";
-};
+    pwmleds {
+        compatible = "pwm-leds";
+        pwm_led0: pwm_led_0 {
+            pwms = <&pwm0 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+        };
+    };
 
-&gpio1 {
-	status = "okay";
-};
+    buttons {
+        compatible = "gpio-keys";
+        button0: button_0 {
+            gpios = <&gpio0 11 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Push button switch 0";
+        };
+    };
 
-&i2c0 {
-	compatible = "nordic,nrf-twim";
-	status = "okay";
-	zephyr,concat-buf-size = <1023>;
-	zephyr,flash-buf-max-size = <1023>;
-	clock-frequency = <I2C_BITRATE_FAST>;
-	pinctrl-0 = <&i2c0_default>;
-	pinctrl-1 = <&i2c0_sleep>;
-	pinctrl-names = "default", "sleep";
+    aliases {
+        // sw0 = &button0; // Uncomment to Enable SW0
+        pwm-led0 = &pwm_led0;
+    };
 
-	imu: imu@0 {
-		compatible = "i2c-device";
-		label = "imu";
-		reg = <0>;
-	};
+    pwmclock: pwmclock {
+        compatible    = "pwm-clock";
+        #clock-cells  = <1>;
+        pwms          = <&pwm1 0 PWM_HZ(32768) PWM_POLARITY_NORMAL>;
+    };
 
-	mag: mag@0 {
-		compatible = "i2c-device";
-		label = "mag";
-		reg = <0>;
-	};
-};
+    battery-divider {
+        compatible  = "voltage-divider";
+        status      = "okay";
+        io-channels = <&adc 12>; // Measure VDDHDIV5
+        output-ohms = <1>;
+        full-ohms   = <5>;
+    };
 
-&spi3 {
-	compatible = "nordic,nrf-spim";
-	status = "okay";
-	max-frequency = <DT_FREQ_M(24)>;
-	pinctrl-0 = <&spi3_default>;
-	pinctrl-1 = <&spi3_sleep>;
-	pinctrl-names = "default", "sleep";
-	cs-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;  // CS now on pin P0.06
-
-	imu_spi: imu_spi@0 {
-		compatible = "ICM-45686";      /* or your IMU’s Zephyr driver compatible string */
-		reg = <0>;                      /* SPI chip-select index */
-		spi-max-frequency = <DT_FREQ_M(24)>;
-		drdy-gpios = <&gpio1 0 GPIO_INT_EDGE_TO_ACTIVE>; /* IMU INT1 → P1.00 */
-		label = "IMU_SPI";
-	};
-};
-
-&pwm0 {
-	status = "okay";
-	pinctrl-0 = <&pwm0_default>;
-	pinctrl-1 = <&pwm0_sleep>;
-	pinctrl-names = "default", "sleep";
-};
-
-&pwm1 {
-	status = "okay";
-	pinctrl-0 = <&pwm1_default>;
-	pinctrl-1 = <&pwm1_sleep>;
-	pinctrl-names = "default", "sleep";
+    zephyr,user {
+        /*
+         * IMU INT → P1.00 (active‐high)
+         * LED    → P0.15
+         */
+        int0-gpios = <&gpio1 0 0>;
+        led-gpios  = <&gpio0 15 GPIO_OPEN_SOURCE>;
+        // clk-gpios = <&gpio0 20 GPIO_OPEN_DRAIN>; // (not used, since IMU has no CLK_CTL)
+    };
 };
 
 &reg1 {
-	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+    regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&adc {
+    status = "okay";
+};
+
+&gpiote {
+    status = "okay";
+};
+
+&gpio0 {
+    status = "okay";
+};
+
+&gpio1 {
+    status = "okay";
+};
+
+/*
+ * === I²C0 controller (unchanged) ===
+ *   SDA → P0.06, SCL → P0.08
+ */
+&i2c0 {
+    compatible             = "nordic,nrf-twim";
+    status                 = "okay";
+    zephyr,concat-buf-size = <1023>;
+    zephyr,flash-buf-max-size = <1023>;
+    clock-frequency        = <I2C_BITRATE_FAST>;
+    pinctrl-0              = <&i2c0_default>;
+    pinctrl-1              = <&i2c0_sleep>;
+    pinctrl-names          = "default", "sleep";
+
+    imu: imu@0 {
+        compatible = "i2c-device";
+        label      = "imu";
+        reg        = <0>;
+    };
+
+    mag: mag@0 {
+        compatible = "i2c-device";
+        label      = "mag";
+        reg        = <0>;
+    };
+};
+
+&pwm0 {
+    status       = "okay";
+    pinctrl-0    = <&pwm0_default>;
+    pinctrl-1    = <&pwm0_sleep>;
+    pinctrl-names = "default", "sleep";
+};
+
+&pwm1 {
+    status       = "okay";
+    pinctrl-0    = <&pwm1_default>;
+    pinctrl-1    = <&pwm1_sleep>;
+    pinctrl-names = "default", "sleep";
 };
 
 zephyr_udc0: &usbd {
-	compatible = "nordic,nrf-usbd";
-	status = "okay";
-	cdc_acm_uart0: cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-	};
-};
-
-&nfct {
-	status = "disabled";
+    compatible = "nordic,nrf-usbd";
+    status     = "okay";
+    cdc_acm_uart0: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+    };
 };
 
 &cryptocell {
-	status = "disabled";
+    status = "disabled";
 };
 
- / {
-	model = "supermini_uf2";
-	compatible = "supermini_uf2";
+&nfct {
+    status = "disabled";
+};
 
-	chosen {
-		zephyr,sram = &sram0;
-		zephyr,flash = &flash0;
-		zephyr,console = &cdc_acm_uart0;
-		zephyr,shell-uart = &cdc_acm_uart0;
-	};
+/*
+ * === SPI3 controller, remapped for your IMU ===
+ *   MISO → P0.22 (IMU SDO)
+ *   MOSI → P0.20 (IMU SDA)
+ *   SCK  → P0.17 (IMU SCL)
+ *   CS   → P0.24 (IMU CS, active‐low)
+ */
+&spi3 {
+    compatible     = "nordic,nrf-spim";
+    status         = "okay";
+    max-frequency  = <DT_FREQ_M(24)>;
+    pinctrl-0      = <&spi3_default>;
+    pinctrl-1      = <&spi3_sleep>;
+    pinctrl-names  = "default", "sleep";
 
-	pwmleds {
-		compatible = "pwm-leds";
-		pwm_led0: pwm_led_0 {
-			pwms = <&pwm0 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
-		};
-	};
+    cs-gpios = <&gpio0 24 GPIO_ACTIVE_LOW>;
 
-	buttons {
-		compatible = "gpio-keys";
-		button0: button_0 {
-			gpios = <&gpio0 11 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-			label = "Push button switch 0";
-		};
-	};
-
-	aliases {
-		// sw0 = &button0; // Uncomment to Enable SW0
-		pwm-led0 = &pwm_led0;
-	};
-
-	pwmclock: pwmclock {
-		compatible = "pwm-clock";
-		#clock-cells = <1>;
-		pwms = <&pwm1 0 PWM_HZ(32768) PWM_POLARITY_NORMAL>;
-	};
-
-	battery-divider {
-		compatible = "voltage-divider";
-		status = "okay";
-		io-channels = <&adc 12>;
-		output-ohms = <1>;
-		full-ohms = <5>;
-	};
-
-	zephyr,user {
-    int0-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;  // INT1 on physical pin 100 -> P1.04
-    led-gpios = <&gpio0 15 GPIO_OPEN_SOURCE>;
-	};
+    imu_spi: imu_spi@0 {
+        compatible         = "vnd,spi-device";
+        spi-max-frequency  = <DT_FREQ_M(24)>;
+        label              = "imu-spi";
+        reg                = <0>;
+    };
 };
