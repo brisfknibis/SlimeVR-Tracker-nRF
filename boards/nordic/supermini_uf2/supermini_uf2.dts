@@ -122,13 +122,8 @@
     };
 
     zephyr,user {
-        /*
-         * IMU INT → P1.00 (active‐high)
-         * LED    → P0.15
-         */
-        int0-gpios = <&gpio1 0 0>;
+        int0-gpios = <&gpio0 11 0>;
         led-gpios  = <&gpio0 15 GPIO_OPEN_SOURCE>;
-        // clk-gpios = <&gpio0 20 GPIO_OPEN_DRAIN>; // (not used, since IMU has no CLK_CTL)
     };
 };
 
