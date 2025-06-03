@@ -201,7 +201,7 @@ zephyr_udc0: &usbd {
 	};
 
 	zephyr,user {
-		int-gpios = <&gpio1 4 (GPIO_ACTIVE_HIGH)>;  // IMU INT1 → P1.04
-		led-gpios = <&gpio0 15 GPIO_OPEN_SOURCE>;
+    int0-gpios = <&gpio1 4 GPIO_ACTIVE_HIGH>;  // INT1 on physical pin 100 -> P1.04
+    led-gpios = <&gpio0 15 GPIO_OPEN_SOURCE>;
 	};
 };
