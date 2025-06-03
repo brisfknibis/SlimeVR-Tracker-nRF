@@ -114,10 +114,11 @@
 	cs-gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;  // CS now on pin P0.06
 
 	imu_spi: imu_spi@0 {
-		compatible = "vnd,spi-device";
+		compatible = "ICM-45686";      /* or your IMU’s Zephyr driver compatible string */
+		reg = <0>;                      /* SPI chip-select index */
 		spi-max-frequency = <DT_FREQ_M(24)>;
-		label = "imu-spi";
-		reg = <0>;
+		drdy-gpios = <&gpio1 0 GPIO_INT_EDGE_TO_ACTIVE>; /* IMU INT1 → P1.00 */
+		label = "IMU_SPI";
 	};
 };
 
