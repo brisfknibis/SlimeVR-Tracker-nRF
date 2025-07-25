@@ -93,7 +93,7 @@ int icm45_init(float clock_rate, float accel_time, float gyro_time, float *accel
 	err |= ssi_burst_read(SENSOR_INTERFACE_DEV_IMU, ICM45686_FIFO_COUNT_0, fifo_count, 2);
 
 	if (err)
-		{
+	{
 		LOG_ERR("ICM45686 initialization failed - communication error");
 		return -1;
 	}
