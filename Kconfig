@@ -197,7 +197,7 @@ config ACTIVE_TIMEOUT_THRESHOLD
 
 config ACTIVE_TIMEOUT_DELAY
     int "Activity timeout delay (ms)"
-    default 900000
+    default 28800000
     depends on USE_ACTIVE_TIMEOUT
     help
         Activity timeout duration when triggered.

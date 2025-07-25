@@ -129,5 +129,10 @@ int main(void)
 
 	sys_reset_mode(reset_mode);
 
+	// Perform ICM45686 startup health check after system initialization
+	// This helps catch clock issues early, especially after deep sleep wake-up or USB reconnection
+	sensor_imu_startup_check();
+
 	return 0;
 }
+
