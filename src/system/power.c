@@ -73,22 +73,22 @@ static const struct gpio_dt_spec ldo_en = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, ldo
 
 void sys_interface_suspend(void)
 {
-#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu_spi)))
-	const struct device *const pm_spi_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu_spi)));
-	pm_device_action_run(pm_spi_imu, PM_DEVICE_ACTION_SUSPEND);
-#endif
-#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu)))
-	const struct device *const pm_i2c_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu)));
-	pm_device_action_run(pm_i2c_imu, PM_DEVICE_ACTION_SUSPEND);
-#endif
-#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag_spi)))
-	const struct device *const pm_spi_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag_spi)));
-	pm_device_action_run(pm_spi_mag, PM_DEVICE_ACTION_SUSPEND);
-#endif
-#if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag)))
-	const struct device *const pm_i2c_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag)));
-	pm_device_action_run(pm_i2c_mag, PM_DEVICE_ACTION_SUSPEND);
-#endif
+// #if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu_spi)))
+// 	const struct device *const pm_spi_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu_spi)));
+// 	pm_device_action_run(pm_spi_imu, PM_DEVICE_ACTION_SUSPEND);
+// #endif
+// #if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(imu)))
+// 	const struct device *const pm_i2c_imu = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(imu)));
+// 	pm_device_action_run(pm_i2c_imu, PM_DEVICE_ACTION_SUSPEND);
+// #endif
+// #if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag_spi)))
+// 	const struct device *const pm_spi_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag_spi)));
+// 	pm_device_action_run(pm_spi_mag, PM_DEVICE_ACTION_SUSPEND);
+// #endif
+// #if DT_NODE_HAS_STATUS_OKAY(DT_PARENT(DT_NODELABEL(mag)))
+// 	const struct device *const pm_i2c_mag = DEVICE_DT_GET(DT_PARENT(DT_NODELABEL(mag)));
+// 	pm_device_action_run(pm_i2c_mag, PM_DEVICE_ACTION_SUSPEND);
+// #endif
 }
 
 void sys_interface_resume(void)
