@@ -798,7 +798,29 @@ void sensor_loop(void) {
     uint16_t packets = sensor_imu->fifo_read(rawData, 1024);
 #endif
 
-			// Debug info
+static int empty_fifo_retry = 0;
+    if (packets == 0) {
+        LOG_WRN("No packets in buffer—attempt #%d to re-init IMU", ++empty_fifo_retry);
+        if (empty_fifo_retry >= 3) {
+            LOG_ERR("Giving up, full re-scan/init");
+            empty_fifo_retry = 0;
+            sensor_imu->shutdown();
+            k_msleep(50);
+            if (!sensor_init()) {
+                LOG_INF("IMU re-init successful");
+            } else {
+                LOG_ERR("IMU re-init FAILED, forcing full sensor scan");
+                sensor_request_scan(true); // Force a full scan if re-init fails
+            }
+        }
+        k_msleep(10);
+        k_free(rawData); // Free the buffer before continuing
+        continue; // Skip the rest of the loop and try again
+    } else {
+        empty_fifo_retry = 0;  // reset on success
+    }
+
+// Debug info
 #if DEBUG
 			int64_t acquisition_time = k_uptime_ticks();
 			bool valid_acquisition
