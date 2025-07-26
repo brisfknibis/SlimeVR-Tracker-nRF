@@ -210,37 +210,38 @@ int sensor_scan(void)
 	LOG_ERR("IMU node does not exist");
 #endif
 	if (imu_id >= (int)ARRAY_SIZE(dev_imu_names))
-		LOG_WRN("Found unknown device");
-	else if (imu_id < 0)
-		LOG_ERR("No IMU detected");
-	else
-		LOG_INF("Found %s", dev_imu_names[imu_id]);
-	if (imu_id >= 0)
-	{
-		if (imu_id >= (int)ARRAY_SIZE(sensor_imus) || sensor_imus[imu_id] == NULL || sensor_imus[imu_id] == &sensor_imu_none)
-		{
-			sensor_scan_clear(); // clear invalid sensor data
-			sensor_imu = &sensor_imu_none;
-			sensor_sensor_scanning = false; // done
-			LOG_ERR("IMU not supported");
-			set_status(SYS_STATUS_SENSOR_ERROR, true);
-			return -1; // an IMU was detected but not supported
-		}
-		else
-		{
-			sensor_imu = sensor_imus[imu_id];
-		}
-	}
-	else
-	{
-		sensor_scan_clear(); // clear invalid sensor data
-		sensor_imu = &sensor_imu_none;
-		sensor_sensor_scanning = false; // done
-		set_status(SYS_STATUS_SENSOR_ERROR, true);
-		return -1; // no IMU detected! something is very wrong
-	}
+        LOG_WRN("Found unknown device");
+    else if (imu_id < 0) {
+        LOG_ERR("No IMU detected");
+        sensor_scan_clear(); // Clear retained if not detected
+    } else
+        LOG_INF("Found %s", dev_imu_names[imu_id]);
+    if (imu_id >= 0)
+    {
+        if (imu_id >= (int)ARRAY_SIZE(sensor_imus) || sensor_imus[imu_id] == NULL || sensor_imus[imu_id] == &sensor_imu_none)
+        {
+            sensor_scan_clear(); // clear invalid sensor data
+            sensor_imu = &sensor_imu_none;
+            sensor_sensor_scanning = false; // done
+            LOG_ERR("IMU not supported");
+            set_status(SYS_STATUS_SENSOR_ERROR, true);
+            return -1; // an IMU was detected but not supported
+        }
+        else
+        {
+            sensor_imu = sensor_imus[imu_id];
+        }
+    }
+    else
+    {
+        sensor_scan_clear(); // clear invalid sensor data
+        sensor_imu = &sensor_imu_none;
+        sensor_sensor_scanning = false; // done
+        set_status(SYS_STATUS_SENSOR_ERROR, true);
+        return -1; // no IMU detected! something is very wrong
+    }
 
-	int mag_id = -1;
+    int mag_id = -1;
 #if SENSOR_MAG_SPI_EXISTS
 	// for SPI scan, set frequency of 10MHz, it will be set later by the driver initialization if needed
 	sensor_mag_spi_dev.config.frequency = MHZ(10);
@@ -317,30 +318,32 @@ int sensor_scan(void)
 	LOG_WRN("Magnetometer node does not exist");
 #endif
 	if (mag_id >= (int)ARRAY_SIZE(dev_mag_names))
-		LOG_WRN("Found unknown device");
-	else if (mag_id < 0)
-		LOG_WRN("No magnetometer detected");
-	else
-		LOG_INF("Found %s", dev_mag_names[mag_id]);
-	if (mag_id >= 0) // if there is no magnetometer we do not care as much
-	{
-		if (mag_id >= (int)ARRAY_SIZE(sensor_mags) || sensor_mags[mag_id] == NULL || sensor_mags[mag_id] == &sensor_mag_none)
-		{
-			sensor_mag = &sensor_mag_none; 
-			mag_available = false;
-			LOG_ERR("Magnetometer not supported");
-		}
-		else
-		{
-			sensor_mag = sensor_mags[mag_id];
-			mag_available = true;
-		}
-	}
-	else
-	{
-		sensor_mag = &sensor_mag_none; 
-		mag_available = false; // marked as not available
-	}
+        LOG_WRN("Found unknown device");
+    else if (mag_id < 0) {
+        LOG_WRN("No magnetometer detected");
+        sensor_scan_clear(); // Clear retained if not detected
+    }
+    else
+        LOG_INF("Found %s", dev_mag_names[mag_id]);
+    if (mag_id >= 0) // if there is no magnetometer we do not care as much
+    {
+        if (mag_id >= (int)ARRAY_SIZE(sensor_mags) || sensor_mags[mag_id] == NULL || sensor_mags[mag_id] == &sensor_mag_none)
+        {
+            sensor_mag = &sensor_mag_none; 
+            mag_available = false;
+            LOG_ERR("Magnetometer not supported");
+        }
+        else
+        {
+            sensor_mag = sensor_mags[mag_id];
+            mag_available = true;
+        }
+    }
+    else
+    {
+        sensor_mag = &sensor_mag_none; 
+        mag_available = false; // marked as not available
+    }
 
 	sensor_scan_write();
 	connection_update_sensor_ids(imu_id, mag_id);
