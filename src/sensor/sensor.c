@@ -22,7 +22,7 @@
 */
 #include "sensor.h"
 
-#include <drivers/gpio.h>
+// #include <drivers/gpio.h>
 #include <math.h>
 
 #include "calibration.h"
