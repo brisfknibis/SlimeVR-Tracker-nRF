@@ -792,8 +792,7 @@ void sensor_loop(void) {
 			}
 			uint16_t packets
 				= sensor_imu->fifo_read(rawData, 1900);  // TODO: name this better?
-#
-			else uint8_t* rawData = (uint8_t*)k_malloc(
+else uint8_t* rawData = (uint8_t*)k_malloc(
 				1024
 			);  // Limit FIFO read to 768 bytes (worst case is ICM 20 byte packet at
 				// 1000Hz and 33ms update time)
