@@ -27,7 +27,6 @@
 #include "calibration.h"
 
 #include <math.h>
-#include <drivers/gpio.h>
 
 #include "fusion/fusions.h"
 #include "sensors.h"
