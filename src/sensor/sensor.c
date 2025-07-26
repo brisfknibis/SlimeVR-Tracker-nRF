@@ -516,100 +516,87 @@ static void set_update_time_ms(int time_ms)
 
 int sensor_init(void)
 {
-	int err;
-	// TODO: on any errors set main_ok false and skip (make functions return nonzero)
-	if (mag_available) // shutdown magnetometer first (in case of passthrough)
-		sensor_mag->shutdown(); // TODO: is this needed?
-	sensor_imu->shutdown(); // TODO: is this needed?
+    int err;
+    // TODO: on any errors set main_ok false and skip (make functions return nonzero)
+    if (mag_available) // shutdown magnetometer first (in case of passthrough)
+        sensor_mag->shutdown(); // TODO: is this needed?
+    sensor_imu->shutdown(); // TODO: is this needed?
 
-	float clock_actual_rate = 0;
+    float clock_actual_rate = 0;
 #if CONFIG_USE_SENSOR_CLOCK
-	set_sensor_clock(true, 32768, &clock_actual_rate); // enable the clock source for IMU if present
+    set_sensor_clock(true, 32768, &clock_actual_rate); // enable the clock source for IMU if present
 #endif
-	if (clock_actual_rate != 0)
-		LOG_INF("Sensor clock rate: %.2fHz", (double)clock_actual_rate);
+    if (clock_actual_rate != 0)
+        LOG_INF("Sensor clock rate: %.2fHz", (double)clock_actual_rate);
 
-	// wait for sensor register reset // TODO: is this needed?
-	k_msleep(100);
+    // wait for sensor register reset // TODO: is this needed?
+    k_msleep(100);
 
-	uint8_t whoami = 0xFF;
-	int ret = sensor_imu->read_reg(0x75, &whoami, 1);  // WHO_AM_I register = 0x75
-	
-	if (ret < 0) {
-        LOG_ERR("Failed I2C/SPI read of WHOAMI");
-	} else {
-        LOG_INF("ICM-45686 WHOAMI = 0x%02X", whoami);
-	}
+    // Removed: WHOAMI and FIFO register reads using sensor_imu->read_reg
 
-	// set FS/range
-	float accel_range = CONFIG_SENSOR_ACCEL_FS;
-	float gyro_range = CONFIG_SENSOR_GYRO_FS;
-	float accel_actual_range, gyro_actual_range;
-	sensor_imu->update_fs(accel_range, gyro_range, &accel_actual_range, &gyro_actual_range);
-	LOG_INF("Accelerometer range: %.2fg", (double)accel_actual_range);
-	LOG_INF("Gyroscope range: %.2fdps", (double)gyro_actual_range);
+    // set FS/range
+    float accel_range = CONFIG_SENSOR_ACCEL_FS;
+    float gyro_range = CONFIG_SENSOR_GYRO_FS;
+    float accel_actual_range, gyro_actual_range;
+    sensor_imu->update_fs(accel_range, gyro_range, &accel_actual_range, &gyro_actual_range);
+    LOG_INF("Accelerometer range: %.2fg", (double)accel_actual_range);
+    LOG_INF("Gyroscope range: %.2fdps", (double)gyro_actual_range);
 
-	// setup sensor, set ODR
-	float accel_initial_time = 1.0 / CONFIG_SENSOR_ACCEL_ODR; // configure with ~1000Hz ODR
-	float gyro_initial_time = 1.0 / CONFIG_SENSOR_GYRO_ODR; // configure with ~1000Hz ODR
-	float mag_initial_time = sensor_update_time_ms / 1000.0; // configure with ~200Hz ODR
-	err = sensor_imu->init(clock_actual_rate, accel_initial_time, gyro_initial_time, &accel_actual_time, &gyro_actual_time);
-
-	uint8_t fifo_cfg[3];
-    sensor_imu->read_reg(0x06, &fifo_cfg[0], 1); // FIFO_EN
-    sensor_imu->read_reg(0x07, &fifo_cfg[1], 1); // FIFO_RST
-    sensor_imu->read_reg(0x3A, &fifo_cfg[2], 1); // INT_STATUS (bit 4 = FIFO ready)
-    LOG_INF("FIFO_EN=0x%02X, FIFO_RST=0x%02X, INT_STATUS=0x%02X", fifo_cfg[0], fifo_cfg[1], fifo_cfg[2]);
+    // setup sensor, set ODR
+    float accel_initial_time = 1.0 / CONFIG_SENSOR_ACCEL_ODR; // configure with ~1000Hz ODR
+    float gyro_initial_time = 1.0 / CONFIG_SENSOR_GYRO_ODR; // configure with ~1000Hz ODR
+    float mag_initial_time = sensor_update_time_ms / 1000.0; // configure with ~200Hz ODR
+    err = sensor_imu->init(clock_actual_rate, accel_initial_time, gyro_initial_time, &accel_actual_time, &gyro_actual_time);
 
 #if SENSOR_IMU_SPI_EXISTS
-	LOG_INF("Requested SPI frequency: %.2fMHz", (double)sensor_imu_spi_dev.config.frequency / 1000000.0);
+    LOG_INF("Requested SPI frequency: %.2fMHz", (double)sensor_imu_spi_dev.config.frequency / 1000000.0);
 #endif
-	LOG_INF("Accelerometer initial rate: %.2fHz", 1.0 / (double)accel_actual_time);
-	LOG_INF("Gyrometer initial rate: %.2fHz", 1.0 / (double)gyro_actual_time);
-	if (err < 0)
-		return err;
+    LOG_INF("Accelerometer initial rate: %.2fHz", 1.0 / (double)accel_actual_time);
+    LOG_INF("Gyrometer initial rate: %.2fHz", 1.0 / (double)gyro_actual_time);
+    if (err < 0)
+        return err;
 // 55-66ms to wait, get chip ids, and setup icm (50ms spent waiting for accel and gyro to start)
-	if (mag_available && mag_enabled)
-	{
-		// TODO: need to flag passthrough enabled
+    if (mag_available && mag_enabled)
+    {
+        // TODO: need to flag passthrough enabled
 //			sensor_imu->ext_passthrough(true); // reenable passthrough
-		err = sensor_mag->init(mag_initial_time, &mag_actual_time); // configure with ~200Hz ODR
+        err = sensor_mag->init(mag_initial_time, &mag_actual_time); // configure with ~200Hz ODR
 #if SENSOR_MAG_SPI_EXISTS
-		LOG_INF("Requested SPI frequency: %.2fMHz", (double)sensor_mag_spi_dev.config.frequency / 1000000.0);
+        LOG_INF("Requested SPI frequency: %.2fMHz", (double)sensor_mag_spi_dev.config.frequency / 1000000.0);
 #endif
-		LOG_INF("Magnetometer initial rate: %.2fHz", 1.0 / (double)mag_actual_time);
-		if (err < 0)
-			return err;
+        LOG_INF("Magnetometer initial rate: %.2fHz", 1.0 / (double)mag_actual_time);
+        if (err < 0)
+            return err;
 // 0-1ms to setup mmc
-	}
-	LOG_INF("Initialized sensors");
+    }
+    LOG_INF("Initialized sensors");
 
-	// Setup fusion
-	sensor_retained_read(); // TODO: useless
-	if (fusion_id == FUSION_VQF)
-		vqf_update_sensor_ids(sensor_imu_id);
-	if (retained->fusion_id == fusion_id) // Check if the retained fusion data is valid and matches the selected fusion
-	{ // Load state if the data is valid (fusion was initialized before)
-		sensor_fusion->load(retained->fusion_data);
-		retained->fusion_id = 0; // Invalidate retained fusion data
-		retained_update();
-	}
-	else
-	{
-		sensor_fusion->init(gyro_actual_time, accel_actual_time, mag_initial_time); // TODO: using initial time since mag are not polled at the actual rate
-	}
+    // Setup fusion
+    sensor_retained_read(); // TODO: useless
+    if (fusion_id == FUSION_VQF)
+        vqf_update_sensor_ids(sensor_imu_id);
+    if (retained->fusion_id == fusion_id) // Check if the retained fusion data is valid and matches the selected fusion
+    { // Load state if the data is valid (fusion was initialized before)
+        sensor_fusion->load(retained->fusion_data);
+        retained->fusion_id = 0; // Invalidate retained fusion data
+        retained_update();
+    }
+    else
+    {
+        sensor_fusion->init(gyro_actual_time, accel_actual_time, mag_initial_time); // TODO: using initial time since mag are not polled at the actual rate
+    }
 
-	sensor_calibration_update_sensor_ids(sensor_imu_id);
-	if (sensor_imu == &sensor_imu_bmi270) // bmi270 specific
-	{
-		LOG_INF("Applying gyroscope gain");
-		bmi_gain_apply(sensor_calibration_get_sensor_data());
-	}
+    sensor_calibration_update_sensor_ids(sensor_imu_id);
+    if (sensor_imu == &sensor_imu_bmi270) // bmi270 specific
+    {
+        LOG_INF("Applying gyroscope gain");
+        bmi_gain_apply(sensor_calibration_get_sensor_data());
+    }
 
-	LOG_INF("Using %s", fusion_names[fusion_id]);
-	LOG_INF("Initialized fusion");
-	sensor_fusion_init = true;
-	return 0;
+    LOG_INF("Using %s", fusion_names[fusion_id]);
+    LOG_INF("Initialized fusion");
+    sensor_fusion_init = true;
+    return 0;
 }
 
 enum sensor_sensor_mode {
