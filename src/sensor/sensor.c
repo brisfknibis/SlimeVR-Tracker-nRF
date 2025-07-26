@@ -357,6 +357,11 @@ static bool main_running = false;
 
 int sensor_request_scan(bool force)
 {
+    if (force) {
+        sensor_scan_clear();   // nuke retained addr/reg
+        LOG_INF("Cleared retained sensor config for fresh scan");
+    }
+
 	if (sensor_sensor_init && !force)
 		return 0; // already initialized
 	main_imu_suspend();
@@ -524,6 +529,15 @@ int sensor_init(void)
 	// wait for sensor register reset // TODO: is this needed?
 	k_msleep(100);
 
+	uint8_t whoami = 0xFF;
+	int ret = sensor_imu->read_reg(0x75, &whoami, 1);  // WHO_AM_I register = 0x75
+	
+	if (ret < 0) {
+        LOG_ERR("Failed I2C/SPI read of WHOAMI");
+	} else {
+        LOG_INF("ICM-45686 WHOAMI = 0x%02X", whoami);
+	}
+
 	// set FS/range
 	float accel_range = CONFIG_SENSOR_ACCEL_FS;
 	float gyro_range = CONFIG_SENSOR_GYRO_FS;
@@ -537,6 +551,13 @@ int sensor_init(void)
 	float gyro_initial_time = 1.0 / CONFIG_SENSOR_GYRO_ODR; // configure with ~1000Hz ODR
 	float mag_initial_time = sensor_update_time_ms / 1000.0; // configure with ~200Hz ODR
 	err = sensor_imu->init(clock_actual_rate, accel_initial_time, gyro_initial_time, &accel_actual_time, &gyro_actual_time);
+
+	uint8_t fifo_cfg[3];
+    sensor_imu->read_reg(0x06, &fifo_cfg[0], 1); // FIFO_EN
+    sensor_imu->read_reg(0x07, &fifo_cfg[1], 1); // FIFO_RST
+    sensor_imu->read_reg(0x3A, &fifo_cfg[2], 1); // INT_STATUS (bit 4 = FIFO ready)
+    LOG_INF("FIFO_EN=0x%02X, FIFO_RST=0x%02X, INT_STATUS=0x%02X", fifo_cfg[0], fifo_cfg[1], fifo_cfg[2]);
+
 #if SENSOR_IMU_SPI_EXISTS
 	LOG_INF("Requested SPI frequency: %.2fMHz", (double)sensor_imu_spi_dev.config.frequency / 1000000.0);
 #endif
@@ -676,6 +697,28 @@ void sensor_loop(void)
 				main_ok = false;
 			}
 			uint16_t packets = sensor_imu->fifo_read(rawData, 1900); // TODO: name this better?
+
+            if (packets == 0) {
+                static int retry = 0;
+                LOG_WRN("Empty FIFO—attempt #%d to re-init IMU", ++retry);
+            
+                if (retry >= 3) {
+                    LOG_ERR("Giving up, full re-scan/init");
+                    retry = 0;
+                    sensor_imu->shutdown();
+                    k_msleep(50);
+                    if (!sensor_init()) {
+                        LOG_INF("IMU re-init successful");
+                    } else {
+                        LOG_ERR("IMU re-init FAILED");
+                    }
+                }
+                // small back‑off so you’re not hammering the bus every 6ms
+                k_msleep(10);
+                continue;
+            } else {
+                retry = 0;  // reset on success
+            }
 #else
 			uint8_t* rawData = (uint8_t*)k_malloc(1024);  // Limit FIFO read to 768 bytes (worst case is ICM 20 byte packet at 1000Hz and 33ms update time)
 			if (rawData == NULL)
