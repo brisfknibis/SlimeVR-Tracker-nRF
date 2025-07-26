@@ -522,7 +522,7 @@ int sensor_init(void)
 		LOG_INF("Sensor clock rate: %.2fHz", (double)clock_actual_rate);
 
 	// wait for sensor register reset // TODO: is this needed?
-	k_usleep(250);
+	k_msleep(100);
 
 	// set FS/range
 	float accel_range = CONFIG_SENSOR_ACCEL_FS;
