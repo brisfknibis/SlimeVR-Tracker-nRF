@@ -27,6 +27,7 @@
 #include "calibration.h"
 
 #include <math.h>
+#include <drivers/gpio.h>
 
 #include "fusion/fusions.h"
 #include "sensors.h"
@@ -531,6 +532,7 @@ int sensor_init(void)
 
     // wait for sensor register reset // TODO: is this needed?
     k_msleep(100);
+	k_msleep(100);
 
     // Removed: WHOAMI and FIFO register reads using sensor_imu->read_reg
 
@@ -688,39 +690,7 @@ void sensor_loop(void)
 			}
 			uint16_t packets = sensor_imu->fifo_read(rawData, 1900); // TODO: name this better?
 
-            if (packets == 0) {
-                static int retry = 0;
-                LOG_WRN("Empty FIFO—attempt #%d to re-init IMU", ++retry);
-            
-                if (retry >= 3) {
-                    LOG_ERR("Giving up, full re-scan/init");
-                    retry = 0;
-                    sensor_imu->shutdown();
-                    k_msleep(50);
-                    if (!sensor_init()) {
-                        LOG_INF("IMU re-init successful");
-                    } else {
-                        LOG_ERR("IMU re-init FAILED");
-                    }
-                }
-                // small back‑off so you’re not hammering the bus every 6ms
-                k_msleep(10);
-                continue;
-            } else {
-                retry = 0;  // reset on success
-            }
-#else
-			uint8_t* rawData = (uint8_t*)k_malloc(1024);  // Limit FIFO read to 768 bytes (worst case is ICM 20 byte packet at 1000Hz and 33ms update time)
-			if (rawData == NULL)
-			{
-				LOG_ERR("Failed to allocate memory for FIFO buffer");
-				set_status(SYS_STATUS_SENSOR_ERROR, true);
-				main_ok = false;
-			}
-			uint16_t packets = sensor_imu->fifo_read(rawData, 1024); // TODO: name this better?
-#endif
-
-			// Debug info
+            // Debug info
 #if DEBUG
 			int64_t acquisition_time = k_uptime_ticks();
 			bool valid_acquisition = k_uptime_get() > ACQUISITION_START_MS && last_acquisition_time < acquisition_time; // wait before beginning profiling
