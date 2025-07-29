@@ -9,6 +9,10 @@
 
 #include "led.h"
 
+/* IMU LED mirror (implemented in src/imu_led.c) */
+void imu_led_off(void);
+void imu_led_sync(enum sys_led_color color, int value_pptt);
+
 LOG_MODULE_REGISTER(led, LOG_LEVEL_INF);
 
 static void led_thread(void);
@@ -124,6 +128,7 @@ static void led_suspend(void)
 #ifdef PWM_LED2_EXISTS
 	pm_device_action_run(pwm_led2.dev, PM_DEVICE_ACTION_SUSPEND);
 #endif
+    imu_led_off();
 	led_pin_reset();
 }
 
@@ -201,6 +206,7 @@ static int led_pwm_period[4][1] = {
 // TODO: use computed constants for high/low brightness and color values
 static void led_pin_set(enum sys_led_color color, int brightness_pptt, int value_pptt)
 {
+	
 	LOG_DBG("led_pin_set: color %d, brightness %d, value %d", color, brightness_pptt, value_pptt);
 	if (brightness_pptt < 0)
 		brightness_pptt = 0;
@@ -223,6 +229,8 @@ static void led_pin_set(enum sys_led_color color, int brightness_pptt, int value
 #else
 	gpio_pin_set_dt(&led, value_pptt > 5000);
 #endif
+    /* Mirror the state to the IMU module RGB LED */
+    imu_led_sync(color, value_pptt);
 }
 #endif
 
