@@ -4,6 +4,8 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 
+#include "led.h"
+
 LOG_MODULE_REGISTER(imu_led, LOG_LEVEL_INF);
 
 /* IMU LED pins (from your module pinout)
@@ -45,8 +47,6 @@ void imu_led_off(void)
     set_rgb_raw(false, false, false);
 }
 
-/* Exported: mirror IMU LED to system LED colour/value */
-enum sys_led_color; /* forward decl to avoid including led.h here */
 void imu_led_sync(enum sys_led_color color, int value_pptt)
 {
     if (!imu_led_ready) return;
