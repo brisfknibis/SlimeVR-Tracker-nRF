@@ -17,7 +17,7 @@ LOG_MODULE_REGISTER(imu_led, LOG_LEVEL_INF);
 
 /* If your RGB is common-anode, set to 0 to drive low = ON */
 #ifndef IMU_LED_ACTIVE_HIGH
-#define IMU_LED_ACTIVE_HIGH 1
+#define IMU_LED_ACTIVE_HIGH 0
 #endif
 
 /* Resolve GPIO ports at build time from devicetree labels */
