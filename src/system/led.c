@@ -524,7 +524,7 @@ static void led_thread(void)
 			int red = (int)((1.0 - progress) * 10000.0);
 			if (red < 0)
 				red = 0;
-			int green = (int)((0.1 + (0.9 * progress)) * 10000.0);
+                        int green = (int)((0.05 + (0.95 * progress)) * 10000.0);
 			if (green > 10000)
 				green = 10000;
 			led_set_dynamic_color(clamp_pwm_value(red), clamp_pwm_value(green), 0);
