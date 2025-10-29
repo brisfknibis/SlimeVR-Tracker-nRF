@@ -31,6 +31,7 @@
 #include <zephyr/spinlock.h>
 
 #include <math.h>
+#include <string.h>
 #include <zephyr/sys/atomic.h>
 
 static uint8_t tracker_id, batt, batt_v, sensor_temp, imu_id, mag_id, tracker_status;
@@ -99,13 +100,13 @@ static bool connection_validate_sample(const float *q, const float *a)
 {
         float norm = q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3];
         if (fabsf(norm - 1.0f) > 0.1f) {
-                LOG_WRN("Rejecting quaternion with norm %f", norm);
+                LOG_WRN("Rejecting quaternion with norm %f", (double)norm);
                 return false;
         }
 
         for (int i = 0; i < 3; ++i) {
                 if (fabsf(a[i]) > 32.0f) {
-                        LOG_WRN("Rejecting accel[%d] = %f", i, a[i]);
+                        LOG_WRN("Rejecting accel[%d] = %f", i, (double)a[i]);
                         return false;
                 }
         }
@@ -115,9 +116,13 @@ static bool connection_validate_sample(const float *q, const float *a)
 
 void connection_update_sensor_data(float *q, float *a, int64_t data_time)
 {
-	// data_time is in system ticks, nonzero means valid measurement
-	// TODO: use data_time to measure latency! the latency should be calculated up to before radio sent data
-        struct k_spinlock_key key = k_spin_lock(&sensor_lock);
+        if (!connection_validate_sample(q, a)) {
+                return;
+        }
+
+        // data_time is in system ticks, nonzero means valid measurement
+        // TODO: use data_time to measure latency! the latency should be calculated up to before radio sent data
+        k_spinlock_key_t key = k_spin_lock(&sensor_lock);
         // data_time is in system ticks, nonzero means valid measurement
         // TODO: use data_time to measure latency! the latency should be calculated up to before radio sent data
         send_precise_quat = q_epsilon(q, sensor_q, 0.005);
@@ -150,7 +155,7 @@ static int64_t last_mag_time = 0;
 
 void connection_update_sensor_mag(float *m)
 {
-        struct k_spinlock_key key = k_spin_lock(&sensor_lock);
+        k_spinlock_key_t key = k_spin_lock(&sensor_lock);
         memcpy(sensor_m, m, sizeof(sensor_m));
         mag_update_time = k_uptime_get();
         k_spin_unlock(&sensor_lock, key);
@@ -346,26 +351,47 @@ void connection_thread(void)
                 // mag is higher priority (skip accel, quat is full precision)
                 else if (mag_update_time && k_uptime_get() - last_mag_time > 200)
                 {
+                        float q_snapshot[4];
+                        float m_snapshot[3];
+                        k_spinlock_key_t key = k_spin_lock(&sensor_lock);
+                        memcpy(q_snapshot, sensor_q, sizeof(q_snapshot));
+                        memcpy(m_snapshot, sensor_m, sizeof(m_snapshot));
+                        k_spin_unlock(&sensor_lock, key);
+
                         mag_update_time = 0; // data has been sent
                         last_mag_time = k_uptime_get();
-                        connection_write_packet_4();
+                        connection_write_packet_4(q_snapshot, m_snapshot);
                         continue;
                 }
                 // if time for info and precise quat not needed
                 else if (quat_update_time && !send_precise_quat && k_uptime_get() - last_info_time > 100)
                 {
+                        float q_snapshot[4];
+                        float a_snapshot[3];
+                        k_spinlock_key_t key = k_spin_lock(&sensor_lock);
+                        memcpy(q_snapshot, sensor_q, sizeof(q_snapshot));
+                        memcpy(a_snapshot, sensor_a, sizeof(a_snapshot));
+                        k_spin_unlock(&sensor_lock, key);
+
                         quat_update_time = 0;
                         last_quat_time = k_uptime_get();
                         last_info_time = k_uptime_get();
-                        connection_write_packet_2();
+                        connection_write_packet_2(q_snapshot, a_snapshot);
                         continue;
                 }
                 // send quat otherwise
                 else if (quat_update_time)
                 {
+                        float q_snapshot[4];
+                        float a_snapshot[3];
+                        k_spinlock_key_t key = k_spin_lock(&sensor_lock);
+                        memcpy(q_snapshot, sensor_q, sizeof(q_snapshot));
+                        memcpy(a_snapshot, sensor_a, sizeof(a_snapshot));
+                        k_spin_unlock(&sensor_lock, key);
+
                         quat_update_time = 0;
                         last_quat_time = k_uptime_get();
-                        connection_write_packet_1();
+                        connection_write_packet_1(q_snapshot, a_snapshot);
                         continue;
                 }
                 else if (k_uptime_get() - last_info_time > 100)
