@@ -515,24 +515,23 @@ static void led_thread(void)
 			if (raw_elapsed < 0)
 				raw_elapsed = 0;
 			int64_t limited_elapsed = raw_elapsed > total_ms ? total_ms : raw_elapsed;
-			int half_span = total_ms / 2;
-			int red = 10000;
-			if (limited_elapsed > half_span)
-			{
-				int decay = (int)((limited_elapsed - half_span) * 10000 / (total_ms - half_span));
-				red = clamp_pwm_value(10000 - decay);
-			}
-			int green = 4000 + (int)(limited_elapsed * 6000 / total_ms);
-			if (green > 10000)
-				green = 10000;
-			led_set_dynamic_color(red, green, 0);
-
 			double progress = (double)limited_elapsed / (double)total_ms;
 			if (progress > 1.0)
 				progress = 1.0;
-			double freq_hz = 0.5 + progress * 99.5;
-			if (freq_hz < 0.5)
-				freq_hz = 0.5;
+
+			/* Blend from a vivid orange (mostly red, slight green) through
+			 * yellow and into pure green as the calibration progresses. */
+			int red = (int)((1.0 - progress) * 10000.0);
+			if (red < 0)
+				red = 0;
+                        int green = (int)((0.05 + (0.95 * progress)) * 10000.0);
+			if (green > 10000)
+				green = 10000;
+			led_set_dynamic_color(clamp_pwm_value(red), clamp_pwm_value(green), 0);
+
+			double freq_hz = 1.0 + progress * 99.0;
+			if (freq_hz < 1.0)
+				freq_hz = 1.0;
 			double cycle_ms = 1000.0 / freq_hz;
 			double phase = fmod((double)raw_elapsed, cycle_ms);
 			double half_cycle = cycle_ms / 2.0;
