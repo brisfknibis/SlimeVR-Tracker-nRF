@@ -517,7 +517,7 @@ static void power_thread(void)
 				LOG_WRN("Discharged battery");
 				sys_update_battery_tracker(0, device_plugged);
 			}
-			sys_request_system_off(true);
+			//sys_request_system_off(true);
 		}
 
 		// will update average_pptt, and current_battery_pptt

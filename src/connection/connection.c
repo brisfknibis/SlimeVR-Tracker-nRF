@@ -314,7 +314,7 @@ void connection_thread(void)
 			continue;
 		}
 		// if time for info and precise quat not needed
-		else if (quat_update_time && !send_precise_quat && k_uptime_get() - last_info_time > 100)
+		else if (quat_update_time && !send_precise_quat && k_uptime_get() - last_info_time > 1)
 		{
 			quat_update_time = 0;
 			last_quat_time = k_uptime_get();
@@ -330,13 +330,13 @@ void connection_thread(void)
 			connection_write_packet_1();
 			continue;
 		}
-		else if (k_uptime_get() - last_info_time > 100)
+		else if (k_uptime_get() - last_info_time > 1)
 		{
 			last_info_time = k_uptime_get();
 			connection_write_packet_0();
 			continue;
 		}
-		else if (k_uptime_get() - last_status_time > 1000)
+		else if (k_uptime_get() - last_status_time > 1)
 		{
 			last_status_time = k_uptime_get();
 			connection_write_packet_3();
@@ -346,6 +346,6 @@ void connection_thread(void)
 		{
 			connection_clocks_request_stop();
 		}
-		k_msleep(1); // TODO: should be getting timing from receiver, for now just send asap
+		k_usleep(1); // TODO: should be getting timing from receiver, for now just send asap
 	}
 }
