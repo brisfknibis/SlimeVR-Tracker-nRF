@@ -34,6 +34,8 @@
 #include "tdma.h"
 #include "util.h"
 
+#define ESB_CHANNEL 53
+
 uint8_t last_reset = 0;
 //const nrfx_timer_t m_timer = NRFX_TIMER_INSTANCE(1);
 bool esb_state = false;
@@ -257,8 +259,8 @@ int esb_initialize(bool tx)
 		config.retransmit_count = 0;
 		config.tx_mode = ESB_TXMODE_MANUAL;
 		config.payload_length = 32;
-		config.selective_auto_ack = true; // TODO: while pairing, should be set to false
-//		config.use_fast_ramp_up = true;
+		config.selective_auto_ack = true;
+		// config.use_fast_ramp_up = false;
 	}
 	else
 	{
@@ -273,29 +275,28 @@ int esb_initialize(bool tx)
 		// config.tx_mode = ESB_TXMODE_AUTO;
 		config.payload_length = 32;
 		config.selective_auto_ack = true;
-//		config.use_fast_ramp_up = true;
+		// config.use_fast_ramp_up = false;
 	}
 
 	err = esb_init(&config);
 
 	if (!err)
+	{
 		esb_set_base_address_0(base_addr_0);
-
-	if (!err)
 		esb_set_base_address_1(base_addr_1);
-
-	if (!err)
 		esb_set_prefixes(addr_prefix, ARRAY_SIZE(addr_prefix));
-
-	if (!err)
-		esb_set_rf_channel(50);
-
-	if (err)
+		esb_set_rf_channel(ESB_CHANNEL);
+	}
+	else
 	{
 		LOG_ERR("ESB initialization failed: %d", err);
 		set_status(SYS_STATUS_CONNECTION_ERROR, true);
 		return err;
 	}
+
+	int32_t ch;
+	esb_get_rf_channel(&ch);
+	LOG_INF("Initialized ESB, %sX mode ch %d", tx ? "T" : "R", ch);
 
 	esb_initialized = true;
 	return 0;
@@ -449,6 +450,12 @@ void esb_clear_pair(void)
 	esb_reset_pair();
 	sys_write(PAIRED_ID, &retained->paired_addr, paired_addr, sizeof(paired_addr)); // write zeroes
 	LOG_INF("Pairing data reset");
+}
+
+int esb_get_frequency(void) {
+	uint32_t channel;
+	esb_get_rf_channel(&channel);
+	return 2400UL + channel; // MHz
 }
 
 void esb_write(uint8_t *data, uint8_t packet_sequnce)
