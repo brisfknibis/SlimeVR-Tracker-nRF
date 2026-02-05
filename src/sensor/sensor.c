@@ -184,10 +184,11 @@ void sensor_scan_thread(void)
 {
 	int err;
 	sys_interface_resume(); // make sure interfaces are enabled
+	k_msleep(25); // Wait for IMU to power up and stabilize before scanning
 	err = sensor_scan(); // IMUs discovery
 	if (err)
 	{
-		k_msleep(5);
+		k_msleep(25); // Additional delay before retry to allow IMU to stabilize
 		LOG_INF("Retrying sensor detection");
 
 		// Reset address before retrying sensor detection
