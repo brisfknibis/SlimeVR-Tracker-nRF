@@ -83,11 +83,6 @@ jobs:
           tar xf zephyr-sdk-0.17.4_linux-x86_64_minimal.tar.xz -C ~/
           ~/zephyr-sdk-0.17.4/setup.sh -c -t arm-zephyr-eabi
 
-      - name: 📂 Cloning Triggered Repository/Branch
-        run: |
-          cd zephyr-workspace
-          git clone --single-branch --recurse-submodules -b $GITHUB_REF_NAME $GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git
-
       - name: ♻️ Initialize Zephyr Workspace
         # Set up the Zephyr workspace and install the Python dependencies
         run: |
@@ -103,24 +98,24 @@ jobs:
           pip3 install -r zephyr/scripts/requirements.txt
 
       - name: 🔨 Build SlimeVR-Tracker-nRF - ${{ matrix.boards.boardname }}
-      # Receiver Firmware Build 
+      # Receiver Firmware Build
         if: always()
         run: |
           cd zephyr-workspace
           sudo rm -rf Releases
           mkdir Releases
-          sudo rm -rf ${{ github.event.repository.name }}/build
-          mkdir ${{ github.event.repository.name }}/build
+          sudo rm -rf SlimeNRF-CI/build
+          mkdir SlimeNRF-CI/build
 
           west build \
               --board ${{ matrix.boards.boardname }} \
-              --pristine=always ${{ github.event.repository.name }} \
-              --build-dir ${{ github.event.repository.name }}/build \
+              --pristine=always SlimeNRF-CI \
+              --build-dir SlimeNRF-CI/build \
               -- \
               -DNCS_TOOLCHAIN_VERSION=NONE \
-              -DBOARD_ROOT=../${{ github.event.repository.name }}
+              -DBOARD_ROOT=../SlimeNRF-CI
 
-          mv ${{ github.event.repository.name }}/build/${{ github.event.repository.name }}/zephyr/zephyr.${{ matrix.boards.fileformat }} Releases/${{ matrix.boards.filename }}.${{ matrix.boards.fileformat }}
+          mv SlimeNRF-CI/build/SlimeNRF-CI/zephyr/zephyr.${{ matrix.boards.fileformat }} Releases/${{ matrix.boards.filename }}.${{ matrix.boards.fileformat }}
 
       - name: 💾 Upload Artifact - ${{ matrix.boards.boardname }}
         if: always()
